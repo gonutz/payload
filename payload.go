@@ -2,6 +2,7 @@ package payload
 
 import (
 	"encoding/binary"
+	"errors"
 	"github.com/kardianos/osext"
 	"io"
 	"os"
@@ -35,6 +36,10 @@ func Read() ([]byte, error) {
 	err = binary.Read(file, binary.LittleEndian, &originalSize)
 	if err != nil {
 		return nil, err
+	}
+
+	if originalSize > uint64(end) {
+		return nil, errors.New("reading payload: invalid data size at file end")
 	}
 
 	// go to an offset of the original exe's size
