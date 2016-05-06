@@ -6,9 +6,11 @@ This way there is no need to pack your files or create an installer, you can jus
 
 # Usage
 Install the tool by running
+
     go get -u github.com/gonutz/payload/cmd/payload
 
 To then combine an executable and a data file, run:
+
     payload -exe=path/to/exe -data=path/to/data -output=path/for/combined/exe
 
 In the executable file you can add code to read the data back in as a []byte slice, here is an example program that just reads the payload and writes it back out to a file:
