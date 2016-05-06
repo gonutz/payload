@@ -15,17 +15,21 @@ import (
 )
 
 var (
-	exeFile    = flag.String("exe", "", "Executable file to append data to")
-	dataFile   = flag.String("data", "", "Data file to be appended to the executable")
-	outputFile = flag.String("output", "", "Combined output file")
+	exeFile    = flag.String("exe", "", "Executable file to append data to.")
+	dataFile   = flag.String("data", "", "Data file to be appended to the executable.")
+	outputFile = flag.String("output", "", "Combined output file, defaults to the given exe.")
 )
 
 func main() {
 	flag.Parse()
 
-	if *exeFile == "" || *dataFile == "" || *outputFile == "" {
+	if *exeFile == "" || *dataFile == "" {
 		flag.Usage()
 		return
+	}
+
+	if *outputFile == "" {
+		*outputFile = *exeFile
 	}
 
 	stat, err := os.Stat(*exeFile)
