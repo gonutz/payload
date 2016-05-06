@@ -5,8 +5,9 @@ The library then gives you a function to read the data back in from the end of t
 This way there is no need to pack your files or create an installer, you can just ship a single executable.
 
 # Usage
-Install the tool by running
+Install the tool and library by running
 
+    go get -u github.com/gonutz/payload
     go get -u github.com/gonutz/payload/cmd/payload
 
 To then combine an executable and a data file, run:
