@@ -56,6 +56,7 @@ func main() {
 	binary.Write(originalSize, binary.LittleEndian, size)
 
 	output := append(exe, data...)
+	output = append(output, []byte("payload ")...)
 	output = append(output, originalSize.Bytes()...)
 
 	err = ioutil.WriteFile(*outputFile, output, fileMode)
