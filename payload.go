@@ -10,54 +10,19 @@ import (
 	"github.com/kardianos/osext"
 )
 
-type ReadSeekCloser interface {
-	io.Reader
-	io.Seeker
-	io.Closer
-}
+// Read reads the whole payload at once, returning it as a byte slice.
+func Read() ([]byte, error) {
+	r, err := Open()
+	if err != nil {
+		return nil, errors.New("payload.Read: " + err.Error())
+	}
+	defer r.Close()
 
-type reader struct {
-	file            ReadSeekCloser
-	start, pos, end int64
-}
-
-func (r *reader) Read(p []byte) (n int, err error) {
-	if r.pos >= r.end {
-		return 0, io.EOF
+	data, err := ioutil.ReadAll(r)
+	if err != nil {
+		return nil, errors.New("payload.Read: unable to read payload: " + err.Error())
 	}
-	if int64(len(p)) > r.end-r.pos {
-		p = p[:r.end-r.pos]
-	}
-	n, err = r.file.Read(p)
-	r.pos += int64(n)
-	return
-}
-
-func (r *reader) Seek(offset int64, whence int) (int64, error) {
-	var newPos int64
-	switch whence {
-	case io.SeekStart:
-		newPos = r.start + offset
-	case io.SeekCurrent:
-		newPos = r.pos + offset
-	case io.SeekEnd:
-		newPos = r.end + offset
-	default:
-		return 0, errors.New("payload.reader.Seek: invalid whence")
-	}
-	if newPos < r.start {
-		return r.pos - r.start, errors.New("payload.reader.Seek: negative position")
-	}
-	if newPos > r.end {
-		newPos = r.end
-	}
-	var err error
-	r.pos, err = r.file.Seek(newPos, io.SeekStart)
-	return r.pos - r.start, err
-}
-
-func (r *reader) Close() error {
-	return r.file.Close()
+	return data, nil
 }
 
 // Open opens the payload for reading
@@ -129,17 +94,52 @@ func Open() (ReadSeekCloser, error) {
 	}, nil
 }
 
-// Read reads the whole payload at once, returning it as a byte slice.
-func Read() ([]byte, error) {
-	r, err := Open()
-	if err != nil {
-		return nil, errors.New("payload.Read: " + err.Error())
-	}
-	defer r.Close()
+type ReadSeekCloser interface {
+	io.Reader
+	io.Seeker
+	io.Closer
+}
 
-	data, err := ioutil.ReadAll(r)
-	if err != nil {
-		return nil, errors.New("payload.Read: unable to read payload: " + err.Error())
+type reader struct {
+	file            ReadSeekCloser
+	start, pos, end int64
+}
+
+func (r *reader) Read(p []byte) (n int, err error) {
+	if r.pos >= r.end {
+		return 0, io.EOF
 	}
-	return data, nil
+	if int64(len(p)) > r.end-r.pos {
+		p = p[:r.end-r.pos]
+	}
+	n, err = r.file.Read(p)
+	r.pos += int64(n)
+	return
+}
+
+func (r *reader) Seek(offset int64, whence int) (int64, error) {
+	var newPos int64
+	switch whence {
+	case io.SeekStart:
+		newPos = r.start + offset
+	case io.SeekCurrent:
+		newPos = r.pos + offset
+	case io.SeekEnd:
+		newPos = r.end + offset
+	default:
+		return 0, errors.New("payload.reader.Seek: invalid whence")
+	}
+	if newPos < r.start {
+		return r.pos - r.start, errors.New("payload.reader.Seek: negative position")
+	}
+	if newPos > r.end {
+		newPos = r.end
+	}
+	var err error
+	r.pos, err = r.file.Seek(newPos, io.SeekStart)
+	return r.pos - r.start, err
+}
+
+func (r *reader) Close() error {
+	return r.file.Close()
 }
