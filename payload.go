@@ -4,14 +4,66 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
+	"io/ioutil"
 	"os"
 
 	"github.com/kardianos/osext"
 )
 
-func Read() ([]byte, error) {
+type ReadSeekCloser interface {
+	io.Reader
+	io.Seeker
+	io.Closer
+}
+
+type reader struct {
+	file            ReadSeekCloser
+	start, pos, end int64
+}
+
+func (r *reader) Read(p []byte) (n int, err error) {
+	if r.pos >= r.end {
+		return 0, io.EOF
+	}
+	if int64(len(p)) > r.end-r.pos {
+		p = p[:r.end-r.pos]
+	}
+	n, err = r.file.Read(p)
+	r.pos += int64(n)
+	return
+}
+
+func (r *reader) Seek(offset int64, whence int) (int64, error) {
+	var newPos int64
+	switch whence {
+	case io.SeekStart:
+		newPos = r.start + offset
+	case io.SeekCurrent:
+		newPos = r.pos + offset
+	case io.SeekEnd:
+		newPos = r.end + offset
+	default:
+		return 0, errors.New("payload.reader.Seek: invalid whence")
+	}
+	if newPos < r.start {
+		return r.pos - r.start, errors.New("payload.reader.Seek: negative position")
+	}
+	if newPos > r.end {
+		newPos = r.end
+	}
+	var err error
+	r.pos, err = r.file.Seek(newPos, io.SeekStart)
+	return r.pos - r.start, err
+}
+
+func (r *reader) Close() error {
+	return r.file.Close()
+}
+
+// Open opens the payload for reading
+func Open() (ReadSeekCloser, error) {
 	annotate := func(msg string, err error) error {
-		return errors.New("read payload: " + msg + ": " + err.Error())
+		return errors.New("payload.Open: " + msg + ": " + err.Error())
 	}
 
 	// find the path currently executed file
@@ -29,46 +81,65 @@ func Read() ([]byte, error) {
 	if err != nil {
 		return nil, annotate("cannot open executable", err)
 	}
-	defer file.Close()
 
 	// the end of the data is 16 bytes before the end of the file, due to the
 	// trailer
-	end, err := file.Seek(-16, os.SEEK_END)
+	dataEnd, err := file.Seek(-16, os.SEEK_END)
 	if err != nil {
+		defer file.Close()
 		return nil, annotate("unable to seek to executable's end", err)
 	}
 
 	var magic [8]byte
 	_, err = io.ReadFull(file, magic[:])
 	if err != nil {
+		defer file.Close()
 		return nil, annotate("unable to read magic string", err)
 	}
 
 	if string(magic[:]) != "payload " {
-		return nil, errors.New("read payload: the executable does not contain a payload")
+		defer file.Close()
+		return nil, errors.New("payload.Open: the executable does not contain a payload")
 	}
 
-	var originalSize uint64
-	err = binary.Read(file, binary.LittleEndian, &originalSize)
+	var dataStart uint64
+	err = binary.Read(file, binary.LittleEndian, &dataStart)
 	if err != nil {
+		defer file.Close()
 		return nil, annotate("unable to read payload size", err)
 	}
 
-	if originalSize > uint64(end) {
-		return nil, errors.New("read payload: invalid data size at file end")
+	if dataStart > uint64(dataEnd) {
+		defer file.Close()
+		return nil, errors.New("payload.Open: invalid data size at file end")
 	}
 
 	// go to the original exe's end, at this point the payload data starts
-	_, err = file.Seek(int64(originalSize), os.SEEK_SET)
+	_, err = file.Seek(int64(dataStart), os.SEEK_SET)
 	if err != nil {
+		defer file.Close()
 		return nil, annotate("unable to seek to payload start", err)
 	}
 
-	data := make([]byte, end-int64(originalSize))
-	_, err = io.ReadFull(file, data)
-	if err != nil {
-		return nil, annotate("unable to read payload data", err)
-	}
+	return &reader{
+		file:  file,
+		start: int64(dataStart),
+		pos:   int64(dataStart),
+		end:   dataEnd,
+	}, nil
+}
 
+// Read reads the whole payload at once, returning it as a byte slice.
+func Read() ([]byte, error) {
+	r, err := Open()
+	if err != nil {
+		return nil, errors.New("payload.Read: " + err.Error())
+	}
+	defer r.Close()
+
+	data, err := ioutil.ReadAll(r)
+	if err != nil {
+		return nil, errors.New("payload.Read: unable to read payload: " + err.Error())
+	}
 	return data, nil
 }
