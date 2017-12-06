@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/kardianos/osext"
+	"github.com/gonutz/osext"
 )
 
 // Read reads the whole payload at once, returning it as a byte slice.
