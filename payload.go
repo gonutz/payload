@@ -28,7 +28,11 @@ func Read() ([]byte, error) {
 // Open opens the payload for reading
 func Open() (ReadSeekCloser, error) {
 	annotate := func(msg string, err error) error {
-		return errors.New("payload.Open: " + msg + ": " + err.Error())
+		errMsg := "payload.Open: " + msg
+		if err != nil {
+			errMsg += ": " + err.Error()
+		}
+		return errors.New(errMsg)
 	}
 
 	// find the path currently executed file
@@ -64,7 +68,7 @@ func Open() (ReadSeekCloser, error) {
 
 	if string(magic[:]) != "payload " {
 		defer file.Close()
-		return nil, errors.New("payload.Open: the executable does not contain a payload")
+		return nil, annotate("the executable does not contain a payload", err)
 	}
 
 	var dataStart uint64
@@ -76,7 +80,7 @@ func Open() (ReadSeekCloser, error) {
 
 	if dataStart > uint64(dataEnd) {
 		defer file.Close()
-		return nil, errors.New("payload.Open: invalid data size at file end")
+		return nil, annotate("invalid data size at file end", nil)
 	}
 
 	// go to the original exe's end, at this point the payload data starts
