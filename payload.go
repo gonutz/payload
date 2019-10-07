@@ -25,7 +25,8 @@ func Read() ([]byte, error) {
 	return data, nil
 }
 
-// Open opens the payload for reading
+// Open opens the payload for reading. Call Close on the returned ReadSeekCloser
+// after you are done with it.
 func Open() (ReadSeekCloser, error) {
 	annotate := func(msg string, err error) error {
 		errMsg := "payload.Open: " + msg
