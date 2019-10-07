@@ -22,7 +22,6 @@ package main
 import (
 	"fmt"
 	"github.com/gonutz/payload"
-	"io/ioutil"
 )
 
 func main() {
@@ -30,7 +29,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	ioutil.WriteFile("./this_is_the_payload", data, 0777)
+	fmt.Printf("%s", data)
 }
-
 ```
