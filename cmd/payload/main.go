@@ -17,7 +17,7 @@ import (
 var (
 	exeFile    = flag.String("exe", "", "Executable file to append data to.")
 	dataFile   = flag.String("data", "", "Data file to be appended to the executable.")
-	outputFile = flag.String("output", "", "Combined output file, defaults to the given exe.")
+	outputFile = flag.String("output", "", "Combined output file, defaults to the input exe.")
 )
 
 func main() {

@@ -33,3 +33,19 @@ func main() {
 	fmt.Printf("%s", data)
 }
 ```
+
+# Documentation
+
+[Here is the Godoc for the library](https://godoc.org/github.com/gonutz/payload).
+
+The command line tool `payload` is used as follows:
+
+```
+Usage of payload:
+  -data string
+        Data file to be appended to the executable.
+  -exe string
+        Executable file to append data to.
+  -output string
+        Combined output file, defaults to the input exe.
+```
